@@ -102,3 +102,13 @@ example (Y : α → ℝ) (hY : Measurable Y) : Prop := by sorry
 --   rw [Set.inter_indicator_one, Set.indicator_compl, mul_sub_left_distrib,
 --   ← Set.inter_indicator_one, mul_one, Set.inter_eq_self_of_subset_right h]
 --   exact clos_under_add_inv hB hA
+
+-- lemma clos_fin_add {n : ℕ} {f : Fin n → (α → ℝ)} (h : ∀ k : Fin n, H.Has (f k)) :
+--   H.Has (∑ k , f k) := by -- f has finite domain Fin n
+--   induction n with
+--   | zero =>
+--     -- empty sum (which is 0) is in the set
+--     simp only [Finset.univ_eq_empty, Finset.sum_empty]
+--     exact zero_in_set
+--   | succ n ih =>
+--     sorry
