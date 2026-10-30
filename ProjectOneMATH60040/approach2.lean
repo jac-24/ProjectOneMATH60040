@@ -11,7 +11,7 @@ import Mathlib.Algebra.BigOperators.Fin
 The main file.
 -/
 
-open Set Function
+open Set Function MeasureTheory
 
 namespace monotoneSetTheory
 
@@ -28,7 +28,7 @@ structure IsMonotoneClassSet (ℋ : Set (α → ℝ)) : Prop where
   has_one_ax : 1 ∈ ℋ
   clos_limits_ax {G : ℕ → (α → ℝ)} {g : α → ℝ} :
     (∀ n : ℕ, G n ∈ ℋ) → Monotone G → (∀ n : ℕ, G n ≥ 0) →
-    (∀ x : α, Filter.Tendsto (fun n => G n x) (Filter.atTop) (nhds (g x))) →
+    (∀ x : α, Filter.Tendsto (fun n ↦ G n x) (Filter.atTop) (nhds (g x))) →
     Bornology.IsBounded (Set.range g) → g ∈ ℋ
 
 lemma clos_add {f g : α → ℝ} (h : IsMonotoneClassSet H) (hf : f ∈ H) (hg : g ∈ H) : f + g ∈ H := by
@@ -60,7 +60,7 @@ lemma is_bounded {f : α → ℝ} (h : IsMonotoneClassSet H) (hf : f ∈ H) :
 
 lemma clos_lims {g : α → ℝ} {G : ℕ → (α → ℝ)} (h : IsMonotoneClassSet H)
   (hg : Bornology.IsBounded (Set.range g)) (GinH : ∀ n : ℕ, G n ∈ H) (monG : Monotone G)
-  (nonG : ∀ n : ℕ, G n ≥ 0) (limG : ∀ x : α, Filter.Tendsto (fun n => G n x) (Filter.atTop)
+  (nonG : ∀ n : ℕ, G n ≥ 0) (limG : ∀ x : α, Filter.Tendsto (fun n ↦ G n x) (Filter.atTop)
   (nhds (g x))) : g ∈ H := by
   exact h.5 GinH monG nonG limG hg
 
@@ -78,7 +78,7 @@ lemma clos_fin_sum {n : ℕ} {G : (Fin n) → α → ℝ} (h : IsMonotoneClassSe
     · exact inh 0
       -- Applying induction hypothesis that for any Fin n sum, if all the elements are in H
       -- then so are the sum
-    · refine ih fun k => inh k.succ
+    · refine ih fun k ↦ inh k.succ
 
 /-- The indicator function of the empty set is contained in any Monotone Class Set. -/
 lemma ind_empty_set (h : IsMonotoneClassSet H) : (∅ : Set α).indicator 1 ∈ H := by
@@ -93,7 +93,7 @@ lemma clos_under_compl {A : Set α} (h : IsMonotoneClassSet H) (hA : (A.indicato
   exact clos_under_add_inv h (one_in_set h) hA
 
 lemma set_stuff {G : ℕ → Set α} (hDis : Pairwise (Disjoint on G)) :
-  Monotone (fun n => (⋃ i : Fin n , G i)) := by
+  Monotone (fun n ↦ (⋃ i : Fin n , G i)) := by
   intro a b hab
   simp only [iUnion_subset_iff]
   intro k i hi
@@ -118,14 +118,14 @@ lemma ind_is_bounded {A : Set α} : Bornology.IsBounded (A.indicator (1 : α →
 lemma increasing_indicator {G : ℕ → Set α} (h : IsMonotoneClassSet H)
   (hInd : ∀ n : ℕ, (G n).indicator 1 ∈ H) :
   (⋃ n, G n).indicator 1 ∈ H := by
-  let B := (fun n => (⋃ i : Fin n, G i))
+  let B := (fun n ↦ (⋃ i : Fin n, G i))
   have incrB : Monotone B := by
     sorry
   have unB : ⋃ i, B i = ⋃ i, G i := by
     sorry
   rw [← unB]
   -- `pure` means eventually equal
-  have this : ∀ x : α, Filter.Tendsto (fun n => (B n).indicator (1 : α → ℝ) x)
+  have this : ∀ x : α, Filter.Tendsto (fun n ↦ (B n).indicator (1 : α → ℝ) x)
     Filter.atTop (pure ((⋃ n, B n).indicator 1 x)) := by
     sorry
   sorry
@@ -133,49 +133,85 @@ lemma increasing_indicator {G : ℕ → Set α} (h : IsMonotoneClassSet H)
 
 end monotoneSetTheory
 
-open monotoneSetTheory
+open monotoneSetTheory MeasurableSpace
+
+namespace try1
 
 variable {α : Type*} [MeasurableSpace α]
 variable {H : Set (α → ℝ)}
 
-def indic_d_system (h : IsMonotoneClassSet H) : MeasurableSpace.DynkinSystem α where
+def indic_d_system (h : IsMonotoneClassSet H) : DynkinSystem α where
   -- This takes a set and says whether it is in this d-system or not
-  Has := fun A => (MeasurableSet A ∧ A.indicator 1 ∈ H)
+  Has := fun A ↦ (MeasurableSet A ∧ A.indicator 1 ∈ H)
   has_empty := ⟨MeasurableSet.empty, ind_empty_set h⟩
-  has_compl := fun hA => ⟨MeasurableSet.compl hA.1, clos_under_compl h hA.2⟩
-  has_iUnion_nat := by
-    intro G disG hG
+  -- First proving complement of measurable set is measurable and then that the indicator
+  -- of the complemented set is in H
+  has_compl := fun hA ↦ ⟨MeasurableSet.compl hA.1, clos_under_compl h hA.2⟩
+  -- First proving that the countable union of disjoint measurable sets is a measurable set
+  -- and then that the indicator of this union is in H
+  has_iUnion_nat := fun _ hG ↦ ⟨MeasurableSet.iUnion fun n ↦ (hG n).1,
+    increasing_indicator h (fun n ↦ (hG n).2)⟩
+
+
+lemma what (I : Set (Set α)) (A : Set α) (hA : A ∈ I) : MeasurableSet A := by
+  apply measurableSet_generateFrom hA
+
+
+theorem mon_class_indic_fun (h : IsMonotoneClassSet H) (I : Set (Set α)) (hI : IsPiSystem I)
+  (indh : ∀ A ∈ I, A.indicator 1 ∈ H) :
+  -- This [] is specifying which σ-algebra want the set to be in
+  ∀ A : Set α, MeasurableSet[generateFrom I] (A) → A.indicator 1 ∈ H := by
+  have this : ∀ A : Set α, A ∈ I → (indic_d_system h).Has A := by
+    intro A hA
     constructor
-    · apply MeasurableSet.iUnion
-      intro b
-      specialize hG b
-      exact hG.1
-    · apply increasing_indicator h
-      intro b
-      specialize hG b
-      exact hG.2
+    ·
+    · exact indh A hA
+
+end try1
+
+namespace try2
+
+variable {α : Type*} {H : Set (α → ℝ)}
+
+def indic_d_system (h : IsMonotoneClassSet H) (I : Set (Set α)) : DynkinSystem α where
+  -- This takes a set and says whether it is in this d-system or not
+  Has := fun A ↦ (MeasurableSet[generateFrom I] A ∧ A.indicator 1 ∈ H)
+  has_empty := ⟨GenerateMeasurable.empty, ind_empty_set h⟩
+  -- First proving complement of measurable set is measurable and then that the indicator
+  -- of the complemented set is in H
+  has_compl := fun hA ↦ ⟨MeasurableSet.compl hA.1, clos_under_compl h hA.2⟩
+  -- First proving that the countable union of disjoint measurable sets is a measurable set
+  -- and then that the indicator of this union is in H
+  has_iUnion_nat := fun _ hG ↦ ⟨MeasurableSet.iUnion fun n ↦ (hG n).1,
+    increasing_indicator h (fun n ↦ (hG n).2)⟩
+
+theorem mon_class_indic_fun (h : IsMonotoneClassSet H) (I : Set (Set α)) (hI : IsPiSystem I)
+  (indh : ∀ A ∈ I, A.indicator 1 ∈ H) :
+  -- This [] is specifying which σ-algebra want the set to be in
+  ∀ A : Set α, MeasurableSet[generateFrom I] (A) → A.indicator 1 ∈ H := by
+  have this' : ∀ A : Set α, A ∈ I → (indic_d_system h I).Has A := by
+    intro A hA
+    constructor
+    · exact measurableSet_generateFrom hA
+    · exact indh A hA
+  have : DynkinSystem.generate I ≤ (indic_d_system h I):= by
+    apply DynkinSystem.generate_le
+    intro t ht
+    specialize this' t ht
+    exact this'
+  have another : ∀ A : Set α, MeasurableSet[generateFrom I] A → (indic_d_system h I).Has A := by
+    rw [DynkinSystem.generateFrom_eq hI]
+    intro A hA
+    apply this
+    exact hA
+  intro A hA
+  specialize another A hA
+  sorry -- Just need to apply definition to get that any set in the indic_d_system satisfies that
+  -- its indicator is in H.
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-example (Y : α → ℝ) (hY : Measurable Y) : Prop := by sorry
-
-#check MeasurableSpace.measurableSet_comap
-
-
--- example (f : α → ℝ) (hf : Measurable f) : MeasureTheory.StronglyMeasurable f := by
---   rw [stronglyMeasurable_iff_measurable]
---   exact hf
+end try2

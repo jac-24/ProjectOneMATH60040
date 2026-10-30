@@ -112,3 +112,14 @@ example (Y : α → ℝ) (hY : Measurable Y) : Prop := by sorry
 --     exact zero_in_set
 --   | succ n ih =>
 --     sorry
+
+
+
+-- example (Y : α → ℝ) (hY : Measurable Y) : Prop := by sorry
+
+-- #check MeasurableSpace.measurableSet_comap
+
+
+-- example (f : α → ℝ) (hf : Measurable f) : MeasureTheory.StronglyMeasurable f := by
+--   rw [stronglyMeasurable_iff_measurable]
+--   exact hf
