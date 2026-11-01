@@ -123,3 +123,38 @@ example (Y : α → ℝ) (hY : Measurable Y) : Prop := by sorry
 -- example (f : α → ℝ) (hf : Measurable f) : MeasureTheory.StronglyMeasurable f := by
 --   rw [stronglyMeasurable_iff_measurable]
 --   exact hf
+
+
+-- namespace try1
+
+-- variable {α : Type*} [MeasurableSpace α]
+-- variable {H : Set (α → ℝ)}
+
+-- def indic_d_system (h : IsMonotoneClassSet H) : DynkinSystem α where
+--   -- This takes a set and says whether it is in this d-system or not
+--   Has := fun A ↦ (MeasurableSet A ∧ A.indicator 1 ∈ H)
+--   has_empty := ⟨MeasurableSet.empty, ind_empty_set h⟩
+--   -- First proving complement of measurable set is measurable and then that the indicator
+--   -- of the complemented set is in H
+--   has_compl := fun hA ↦ ⟨MeasurableSet.compl hA.1, clos_under_compl h hA.2⟩
+--   -- First proving that the countable union of disjoint measurable sets is a measurable set
+--   -- and then that the indicator of this union is in H
+--   has_iUnion_nat := fun _ hG ↦ ⟨MeasurableSet.iUnion fun n ↦ (hG n).1,
+--     increasing_indicator h (fun n ↦ (hG n).2)⟩
+
+
+-- lemma what (I : Set (Set α)) (A : Set α) (hA : A ∈ I) : MeasurableSet A := by
+--   apply measurableSet_generateFrom hA
+
+
+-- theorem mon_class_indic_fun (h : IsMonotoneClassSet H) (I : Set (Set α)) (hI : IsPiSystem I)
+--   (indh : ∀ A ∈ I, A.indicator 1 ∈ H) :
+--   -- This [] is specifying which σ-algebra want the set to be in
+--   ∀ A : Set α, MeasurableSet[generateFrom I] (A) → A.indicator 1 ∈ H := by
+--   have this : ∀ A : Set α, A ∈ I → (indic_d_system h).Has A := by
+--     intro A hA
+--     constructor
+--     ·
+--     · exact indh A hA
+
+-- end try1
