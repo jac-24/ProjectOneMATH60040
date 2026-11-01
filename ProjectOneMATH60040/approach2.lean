@@ -6,17 +6,18 @@ import Mathlib.Topology.Defs.Filter
 import Mathlib.MeasureTheory.Function.StronglyMeasurable.Basic
 import Mathlib.Analysis.Normed.Group.Indicator
 import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Order.Filter.IndicatorFunction
 
 /-!
 The main file.
 -/
 
-open Set Function MeasureTheory
+open Set Function MeasureTheory MeasurableSpace
 
 variable {α : Type*} {H : Set (α → ℝ)}
 
 /-- A Monotone Class Set is a set of bounded functions which is closed under addition,
-closed under scalar multiplication, contains the constant function 1, and is closed
+closed under scalar multiplication, contains the constant function `1`, and is closed
 under bounded limits of increasing sequences of non-negative functions.
 -/
 structure IsMonotoneClassSet (ℋ : Set (α → ℝ)) : Prop where
@@ -25,7 +26,7 @@ structure IsMonotoneClassSet (ℋ : Set (α → ℝ)) : Prop where
   clos_scal_mul_ax : ∀ f : α → ℝ, ∀ μ : ℝ, f ∈ ℋ → μ • f ∈ ℋ -- Scalar multiplication of a function
   has_one_ax : 1 ∈ ℋ
   clos_limits_ax {G : ℕ → (α → ℝ)} {g : α → ℝ} :
-    (∀ n : ℕ, G n ∈ ℋ) → Monotone G → (∀ n : ℕ, G n ≥ 0) →
+    (∀ n : ℕ, G n ∈ ℋ) → Monotone G → (∀ n : ℕ, 0 ≤ G n) →
     (∀ x : α, Filter.Tendsto (fun n ↦ G n x) (Filter.atTop) (nhds (g x))) →
     Bornology.IsBounded (Set.range g) → g ∈ ℋ
 
@@ -58,12 +59,12 @@ lemma is_bounded {f : α → ℝ} (h : IsMonotoneClassSet H) (hf : f ∈ H) :
 
 lemma clos_lims {g : α → ℝ} {G : ℕ → (α → ℝ)} (h : IsMonotoneClassSet H)
   (hg : Bornology.IsBounded (Set.range g)) (GinH : ∀ n : ℕ, G n ∈ H) (monG : Monotone G)
-  (nonG : ∀ n : ℕ, G n ≥ 0) (limG : ∀ x : α, Filter.Tendsto (fun n ↦ G n x) (Filter.atTop)
+  (nonG : ∀ n : ℕ, 0 ≤ G n) (limG : ∀ x : α, Filter.Tendsto (fun n ↦ G n x) (Filter.atTop)
   (nhds (g x))) : g ∈ H := by
   exact h.5 GinH monG nonG limG hg
 
 -- Cannot have `G : Fin n → H`, messes this up for some reason
-/-- Monotone Class Sets are closed under finite sums -/
+/-- Monotone Class Sets are closed under finite sums. -/
 lemma clos_fin_sum {n : ℕ} {G : (Fin n) → α → ℝ} (h : IsMonotoneClassSet H)
   (inh : ∀ k : Fin n, G k ∈ H) : ∑ k, G k ∈ H := by
   induction n with
@@ -90,49 +91,63 @@ lemma clos_under_compl {A : Set α} (h : IsMonotoneClassSet H) (hA : (A.indicato
   rw [Set.indicator_compl]
   exact clos_under_add_inv h (one_in_set h) hA
 
-lemma set_stuff {G : ℕ → Set α} (hDis : Pairwise (Disjoint on G)) :
-  Monotone (fun n ↦ (⋃ i : Fin n , G i)) := by
-  intro a b hab
-  simp only [iUnion_subset_iff]
-  intro k i hi
-  simp only [mem_iUnion]
-  sorry
+lemma ind_bound_one {A : Set α} {x : α} : ‖A.indicator (1 : α → ℝ) x‖ ≤ 1 := by
+  grw [norm_indicator_le_norm_self 1 x]
+  simp
 
-lemma ind_is_bounded {A : Set α} : Bornology.IsBounded (A.indicator (1 : α → ℝ) '' Set.univ) := by
+lemma ind_is_bounded {A : Set α} : Bornology.IsBounded (range (A.indicator (1 : α → ℝ))) := by
   rw [isBounded_iff_forall_norm_le]
   use 1
-  intro x hx
-  have : ∀ a : α, |A.indicator 1 a| ≤ |(1 : α → ℝ) a| := by
-    intro a
-    exact norm_indicator_le_norm_self (1 : α → ℝ) (a)
-  simp only [Pi.one_apply, abs_one] at this
-  simp only [image_univ, mem_range] at hx
-  rcases hx with ⟨y, hy⟩
+  refine fun x hx ↦ Exists.elim hx (fun y hy ↦ ?_)
   rw [← hy]
-  exact this y
+  exact ind_bound_one
+
+lemma mon_sets_mon_ind {G : ℕ → Set α} (hG : Monotone G) :
+  Monotone (fun n ↦ (G n).indicator (1 : α → ℝ)) := by
+  refine fun a b ha x ↦ indicator_le_indicator_apply_of_subset (hG ha) ?_
+  simp
+
+-- `Pure` filter means converges exactly
+lemma what {G : ℕ → Set α}
+  (incG : Monotone G) : ∀ x : α, Filter.Tendsto (fun n ↦ (G n).indicator (1 : α → ℝ) x)
+  Filter.atTop (pure ((⋃ n, G n).indicator 1 x)) := by
+  apply Monotone.tendsto_indicator
+  exact incG
+
+lemma incr_ind_tendto_ind_union {G : ℕ → Set α} (h : IsMonotoneClassSet H)
+  (hInd : ∀ n : ℕ, (G n).indicator 1 ∈ H) (incG : Monotone G) : ∀ x : α, Filter.Tendsto
+  (fun n ↦ (G n).indicator (1 : α → ℝ) x) Filter.atTop (nhds ((⋃ n, G n).indicator 1 x)) := by
+  sorry
+
+lemma ind_is_nonneg {A : Set α} {x : α} : (0 : ℝ) ≤ A.indicator 1 x := by
+  apply Set.indicator_nonneg
+  simp
+
+/--
+Given an increasing sequence of sets indexed by `ℕ`, all of whose indicator function belong to some
+Monotone Class Set `H`, we have that the the indicator on their union is contained in `H`.
+-/
+lemma increasing_indicator' {G : ℕ → Set α} (h : IsMonotoneClassSet H)
+  (hInd : ∀ n : ℕ, (G n).indicator 1 ∈ H) (incG : Monotone G) : (⋃ n, G n).indicator 1 ∈ H := by
+  apply clos_lims h ind_is_bounded hInd (mon_sets_mon_ind incG) ?_
+  · exact incr_ind_tendto_ind_union h hInd incG
+  · intro n x
+    simp only [Pi.zero_apply]
+    exact ind_is_nonneg
 
 -- Got Pairwise disjointness from `Dynkin system` in Mathlib
 -- Need `open Function` to be able to use `on`
 lemma increasing_indicator {G : ℕ → Set α} (h : IsMonotoneClassSet H)
-  (hInd : ∀ n : ℕ, (G n).indicator 1 ∈ H) :
-  (⋃ n, G n).indicator 1 ∈ H := by
+  (hInd : ∀ n : ℕ, (G n).indicator 1 ∈ H) : (⋃ n, G n).indicator 1 ∈ H := by
   let B := (fun n ↦ (⋃ i : Fin n, G i))
-  have incrB : Monotone B := by
-    sorry
-  have unB : ⋃ i, B i = ⋃ i, G i := by
-    sorry
-  rw [← unB]
-  -- `pure` means eventually equal
-  have this : ∀ x : α, Filter.Tendsto (fun n ↦ (B n).indicator (1 : α → ℝ) x)
-    Filter.atTop (pure ((⋃ n, B n).indicator 1 x)) := by
-    sorry
   sorry
-  -- apply clos_lims h
-
-
-open MeasurableSpace
 
 -- These arguments need to be explicit, Lean cannot work them out for some reason
+/--
+The d-system formed by sets that are measurable with respect to the σ-algebra generated
+by some `I : Set (Set α)` and whose indicator function is contained in `H` some
+Monotone Class Set.
+-/
 def indic_d_system (h : IsMonotoneClassSet H) (I : Set (Set α)) : DynkinSystem α where
   -- This takes a set and says whether it is in this d-system or not
   Has := fun A ↦ (MeasurableSet[generateFrom I] A ∧ A.indicator 1 ∈ H)
@@ -147,7 +162,7 @@ def indic_d_system (h : IsMonotoneClassSet H) (I : Set (Set α)) : DynkinSystem 
 
 /-
 This is essentially by definition (as set in generating set is obviously measurable
-with respect to the generated sigma algebra)
+with respect to the generated sigma algebra).
 -/
 lemma in_pi_indic_in_d_set {I : Set (Set α)} {A : Set α} (h : IsMonotoneClassSet H) (hA : A ∈ I)
   (indh : ∀ A ∈ I, A.indicator 1 ∈ H) : (indic_d_system h I).Has A :=
@@ -155,7 +170,7 @@ lemma in_pi_indic_in_d_set {I : Set (Set α)} {A : Set α} (h : IsMonotoneClassS
 
 /-
 This says that the d-system generated by I is contained in the indicator d-system as
-generating set contained in it
+generating set contained in it.
 -/
 lemma gen_d_sys_in_d_set {I : Set (Set α)} (h : IsMonotoneClassSet H)
   (indh : ∀ A ∈ I, A.indicator 1 ∈ H) : DynkinSystem.generate I ≤ indic_d_system h I := by
@@ -165,7 +180,7 @@ lemma gen_d_sys_in_d_set {I : Set (Set α)} (h : IsMonotoneClassSet H)
 
 /-
 This is the main part of the theorem, it says that any measurable set's indicator function
-is in the Monotone Class Set H. Uses Dynkin pi-lambda
+is in the Monotone Class Set H. Uses Dynkin pi-lambda.
 -/
 -- Mathlib seems to keep hypotheses like IsPiSystem explicit
 lemma gen_meas_in_d_set {I : Set (Set α)} {A : Set α} (h : IsMonotoneClassSet H) (hI : IsPiSystem I)
@@ -186,3 +201,16 @@ theorem mon_class_indic_fun {I : Set (Set α)} {A : Set α} (h : IsMonotoneClass
   (hI : IsPiSystem I) (hA : MeasurableSet[generateFrom I] A) (indh : ∀ A ∈ I, A.indicator 1 ∈ H) :
   A.indicator 1 ∈ H := by
   exact (gen_meas_in_d_set h hI hA indh).2
+
+/-
+`@` allows one to fill in all implicit arguments. Needed here as not specifying that
+`α` a measurable space. Using generated sigma algebra.
+-/
+theorem mon_class_simp_fun {I : Set (Set α)} (s : @SimpleFunc α (generateFrom I) ℝ)
+  (h : IsMonotoneClassSet H) (hI : IsPiSystem I) : @s.toFun ∈ H := by
+  sorry
+
+lemma mon_class_nonneg_fun {I : Set (Set α)} (f : α → ℝ) (h : IsMonotoneClassSet H)
+  (hf : Measurable[generateFrom I] f) (negf : 0 ≤ f) (boundf : Bornology.IsBounded (range f)) :
+  f ∈ H := by
+  sorry
