@@ -20,10 +20,9 @@ structure monotoneClassSet where
   clos_add : ∀ f ∈ H, ∀ g ∈ H, f + g ∈ H
   clos_scal_mul : ∀ f ∈ H, ∀ μ : ℝ, μ • f ∈ H -- Scalar multiplication of a function
   has_one : 1 ∈ H
-  clos_inc_lim : sorry
-  -- ∀ G : ℕ → (α → ℝ), Monotone G →
-  -- (∃ g : α → ℝ, ∀ x : α, Filter.Tendsto (fun n => G n x) (Filter.atTop) (nhds (g x))
-  -- → Bornology.IsBounded (g '' Set.univ) → g ∈ H)
+  clos_lim : ∀ G : ℕ → (α → ℝ), Monotone G → (∀ n : ℕ, 0 ≤ G n) →
+  (∃ g : α → ℝ, ∀ x : α, Filter.Tendsto (fun n ↦ G n x) (Filter.atTop) (nhds (g x)) →
+  Bornology.IsBounded (Set.range g) → g ∈ H)
 
 variable {K : monotoneClassSet}
 
