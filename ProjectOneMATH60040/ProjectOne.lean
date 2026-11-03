@@ -17,7 +17,25 @@ public import Mathlib.Algebra.BigOperators.Fin
 public import Mathlib.Order.Filter.IndicatorFunction
 
 /-!
-The main file.
+# Project One
+
+In this file I introduce the definition of a Monotone Class Set, along with a result
+that states under what circumstances all measurable simple functions are contained in
+a particular Monotone Class Set. This result can be used to specify the circumstances
+when all measurable functions are contained in a particular Monotone Class Set.
+
+## Main results
+
+- `IsMonotoneClassSet`: This is the construction of the notion of a Monotone Class Set of
+  functions.
+- `mon_class_indic_fun`: This theorem specifies the conditions under which all
+  measurable indicator functions are contained in a given Monotone Class Set.
+- `mon_class_simple_fun`: This is the main theorem of the file and specifies the conditions
+  under which all measurable simple functions are contained in a given Monotone Class Set.
+
+## References
+
+- [David Williams. Probability with Martingales. Cambridge University Press, 1991.]
 -/
 
 @[expose] public section
@@ -75,7 +93,9 @@ lemma clos_lims {g : α → ℝ} {G : ℕ → (α → ℝ)} (h : IsMonotoneClass
     (nhds (g x))) : g ∈ H := by
   exact h.5 h_inH h_mon nonG limG hg
 
-/-- Monotone Class Sets are closed under finite sums. -/
+/-- Given a Monotone Class Set `H` and a finite set of functions indexed by some `t : Finset ι`,
+we have that if all of these functions are contained in `H` then the sum `∑ i ∈ t, G i` is
+also contained in `H` where `G : ι → α → ℝ`. -/
 lemma clos_fin_sum {ι : Type*} {t : Finset ι} (h : IsMonotoneClassSet H) (G : ι → α → ℝ)
     (hG : ∀ i ∈ t, G i ∈ H) : ∑ i ∈ t, G i ∈ H := by
   apply Finset.sum_induction
@@ -85,7 +105,7 @@ lemma clos_fin_sum {ι : Type*} {t : Finset ι} (h : IsMonotoneClassSet H) (G : 
 
 /-- Given a Monotone Class Set `H`, a finite set of functions indexed by some `t : Finset ι`, and
 a finite set of scalars indexed by `t`, we have that if all of these functions are contained
-in `H` then the sum `∑ i ∈ t, (f i) • G i` is also contained in `H`. -/
+in `H` then the sum `∑ i ∈ t, (f i) • G i` is also contained in `H` where `G : ι → α → ℝ`. -/
 lemma clos_fin_sum_and_smul {ι : Type*} {t : Finset ι} (h : IsMonotoneClassSet H) (G : ι → α → ℝ)
     (f : ι → ℝ) (h_ind : ∀ i ∈ t, G i ∈ H) : ∑ i ∈ t, (f i) • G i ∈ H := by
   apply clos_fin_sum h
